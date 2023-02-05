@@ -1,8 +1,10 @@
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
+use actix_web::error::Error as ActixError;
 use diesel::result::Error as DieselError;
 use serde::Deserialize;
 use serde_json::json;
+use log::error;
 use std::fmt;
 
 #[derive(Debug, Deserialize)]
@@ -33,6 +35,12 @@ impl From<DieselError> for ApiError {
     }
 }
 
+impl From<ActixError> for ApiError {
+    fn from(error: ActixError) -> ApiError {
+        ApiError::new(500, error.to_string())
+    }
+}
+
 impl ResponseError for ApiError {
     fn error_response(&self) -> HttpResponse {
         let status_code = match StatusCode::from_u16(self.status_code) {
@@ -43,7 +51,7 @@ impl ResponseError for ApiError {
         let message = match status_code.as_u16() < 500 {
             true => self.message.clone(),
             false => {
-                log::error!("{}", self.message);
+                error!("{}", self.message);
                 "Internal server error".to_string()
             },
         };

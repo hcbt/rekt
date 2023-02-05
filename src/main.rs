@@ -1,5 +1,6 @@
-use log::{info};
-use actix_web::{App, HttpServer};
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+use actix_identity::IdentityMiddleware;
+use actix_web::{App, HttpServer, cookie::Key};
 use dotenv::dotenv;
 use std::env;
 
@@ -22,7 +23,14 @@ async fn main() -> std::io::Result<()> {
     
     HttpServer::new(move || {
         App::new()
-            .configure(api::handlers::init_routes)
+            .wrap(IdentityMiddleware::default())
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), Key::from(&[0; 64]))
+                .cookie_secure(false)
+                .build()
+            )
+            .configure(api::handlers::users::users_routes)
+            .configure(api::handlers::auth::auth_routes)
     })
     .bind(format!("{}:{}", host, port))?
     .run()
