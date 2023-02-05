@@ -1,17 +1,50 @@
-use actix_web::Responder;
+use crate::api_error::ApiError;
+use crate::api::models::user::{User, UserMessage};
+use actix_web::{delete, get, post, put, web, HttpResponse};
+use serde_json::json;
+use uuid::Uuid;
 
-pub async fn get_users() -> impl Responder {
-    format!("hello from get users")
+// Get all users
+#[get("/users")]
+async fn find_all() -> Result<HttpResponse, ApiError> {
+    log::info!("Getting all users");
+    let users = User::find_all()?;
+    Ok(HttpResponse::Ok().json(users))
 }
 
-pub async fn get_user_by_id() -> impl Responder {
-    format!("hello from get users by id")
+// Get user by ID
+#[get("/users/{id}")]
+async fn find(id: web::Path<Uuid>) -> Result<HttpResponse, ApiError> {
+    let user = User::find(id.into_inner())?;
+    Ok(HttpResponse::Ok().json(user))
 }
 
-pub async fn add_user() -> impl Responder {
-    format!("hello from add user")
+// Add user
+#[post("/users")]
+async fn create(user: web::Json<UserMessage>) -> Result<HttpResponse, ApiError> {
+    let user = User::create(user.into_inner())?;
+    Ok(HttpResponse::Ok().json(user))
 }
 
-pub async fn delete_user() -> impl Responder {
-    format!("hello from delete user")
+// Modify user
+#[put("/users/{id}")]
+async fn update(id: web::Path<Uuid>, user: web::Json<UserMessage>) -> Result<HttpResponse, ApiError> {
+    let user = User::update(id.into_inner(), user.into_inner())?;
+    Ok(HttpResponse::Ok().json(user))
+}
+
+// Delete user route
+#[delete("/users/{id}")]
+async fn delete(id: web::Path<Uuid>) -> Result<HttpResponse, ApiError> {
+    let num_deleted = User::delete(id.into_inner())?;
+    Ok(HttpResponse::Ok().json(json!({ "deleted": num_deleted })))
+}
+
+// Configure API routes
+pub fn init_routes(cfg: &mut web::ServiceConfig) {
+    cfg.service(find_all);
+    cfg.service(find);
+    cfg.service(create);
+    cfg.service(update);
+    cfg.service(delete);
 }

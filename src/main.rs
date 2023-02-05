@@ -1,20 +1,30 @@
-use actix_web::{web, App, HttpServer};
+use log::{info};
+use actix_web::{App, HttpServer};
+use dotenv::dotenv;
+use std::env;
 
+mod api_error;
 mod api;
+mod db;
+mod schema;
 
-#[actix_web::main]
+#[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=debug");
+    dotenv().ok();
+    env_logger::init();
 
-    // Start http server
+    // Load variables
+    let host = env::var("API_HOST").expect("Host not set");
+    let port = env::var("API_PORT").expect("Port not set");
+
+    // Initialize database connection
+    db::init();
+    
     HttpServer::new(move || {
         App::new()
-            .route("/users", web::get().to(api::handlers::get_users))
-            .route("/users/{id}", web::get().to(api::handlers::get_user_by_id))
-            .route("/users", web::post().to(api::handlers::add_user))
-            .route("/users/{id}", web::delete().to(api::handlers::delete_user))
+            .configure(api::handlers::init_routes)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(format!("{}:{}", host, port))?
     .run()
     .await
 }
